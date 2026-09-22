@@ -1,6 +1,6 @@
 export const WORKLOADS = Object.freeze({
-  256: Object.freeze({ segmentsPerRequest: 742, concurrency: 12 }),
-  512: Object.freeze({ segmentsPerRequest: 742, concurrency: 22 }),
+  256: Object.freeze({ segmentsPerRequest: 1488, concurrency: 6 }),
+  512: Object.freeze({ segmentsPerRequest: 1488, concurrency: 12 }),
 });
 
 export function workloadFor(heapMb) {

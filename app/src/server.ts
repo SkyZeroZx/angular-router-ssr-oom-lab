@@ -12,7 +12,7 @@ const deploymentHosts = (process.env["SSR_ALLOWED_HOSTS"] ?? "")
   .map((host) => host.trim())
   .filter(Boolean);
 const angularApp = new AngularNodeAppEngine({
-  allowedHosts: ["a", "nginx", "localhost", "127.0.0.1", ...deploymentHosts],
+  allowedHosts: ["a", "app", "nginx", "localhost", "127.0.0.1", ...deploymentHosts],
   trustProxyHeaders: ["x-forwarded-for", "x-forwarded-proto"],
 });
 

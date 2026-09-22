@@ -13,9 +13,9 @@ http {
   error_log /dev/stderr notice;
   server_tokens off;
 
-  # Keep Nginx's production default explicit. Each test path must fit inside
-  # one 8 KiB request-line buffer; the test does not relax proxy limits.
-  large_client_header_buffers 4 8k;
+  # Sized to the AWS Elastic Load Balancer request line. Nginx's own default is
+  # 8k, which rejects the test path outright.
+  large_client_header_buffers 4 ${NGINX_LARGE_HEADER_BUFFER};
 
   upstream angular_ssr {
     server app:4000;

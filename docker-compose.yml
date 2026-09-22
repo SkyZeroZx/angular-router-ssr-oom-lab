@@ -1,9 +1,10 @@
 services:
   app:
     build: ./app
-    command: ["node", "--max-old-space-size=${HEAP_MB:-256}", "dist/router-oom-e2e/server/server.mjs"]
+    command: ["node", "--max-old-space-size=${HEAP_MB:-256}", "--max-http-header-size=${MAX_HTTP_HEADER_SIZE:-32768}", "dist/router-oom-e2e/server/server.mjs"]
     environment:
       SSR_ALLOWED_HOSTS: ${SSR_ALLOWED_HOSTS:-}
+      RESOLVER_HOLD_MS: ${RESOLVER_HOLD_MS:-1000}
     expose:
       - "4000"
     mem_limit: ${CONTAINER_MEM_LIMIT:-1536m}
@@ -17,6 +18,10 @@ services:
 
   nginx:
     build: ./nginx
+    environment:
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+      NGINX_ENVSUBST_FILTER: "^NGINX_LARGE_HEADER_BUFFER$"
+      NGINX_LARGE_HEADER_BUFFER: ${NGINX_LARGE_HEADER_BUFFER:-16k}
     depends_on:
       app:
         condition: service_healthy
@@ -54,6 +59,20 @@ services:
       TARGET_URL: http://nginx:8080
     depends_on:
       nginx:
+        condition: service_healthy
+    networks: [lab]
+
+  direct:
+    profiles: ["test"]
+    build: ./client
+    command: ["node", "direct.mjs"]
+    environment:
+      MODE: ${MODE:-candidate}
+      SEGMENTS: ${SEGMENTS:-1488}
+      CONCURRENCY: ${CONCURRENCY:-6}
+      TARGET_URL: http://app:4000
+    depends_on:
+      app:
         condition: service_healthy
     networks: [lab]
 
