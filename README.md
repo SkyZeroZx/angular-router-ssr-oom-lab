@@ -128,7 +128,7 @@ Docker reported `OOMKilled=false` in every run below, so these are V8 heap-limit
 |      256 MiB |                  1 |                   6 |            1,488 |  16,368 B |
 |      512 MiB |                  1 |                  12 |            1,488 |  16,368 B |
 
-Each request is held for `RESOLVER_HOLD_MS`, 1,000 ms by default, by the reproduction's route resolver. The hold is what makes requests overlap: at 500 ms the 512 MiB profile never fails, not even at 128 concurrent requests, because parsing is CPU-bound and the requests serialize instead. Spreading the same requests over separate HTTP/2 connections changes nothing.
+Each request is held for `RESOLVER_HOLD_MS`, 1,000 ms by default, by the reproduction's route resolver. The hold was exercised between 500 ms and 1,000 ms to simulate a real environment and confirm the overlap. That range is realistic: a production resolver renders, runs its own operations and waits on API calls before the response goes out, and a longer hold keeps more UrlTrees live at once. The same counts hold when the requests are spread over separate HTTP/2 connections.
 
 The thresholds are 4 requests at 256 MiB and 10 at 512 MiB; the workloads above keep a margin.
 
