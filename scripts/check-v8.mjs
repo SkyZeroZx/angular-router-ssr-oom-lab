@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const PROFILES = Object.freeze({
-  256: 10_388,
-  512: 16_324,
+  256: 8_928,
+  512: 17_856,
 });
 const OOM_PATTERN =
   /JavaScript heap out of memory|Reached heap limit|FatalProcessOutOfMemory/;

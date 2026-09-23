@@ -1,4 +1,4 @@
 FROM node:24.21.0-bookworm-slim
 WORKDIR /lab
-COPY workloads.mjs send.mjs plan.mjs ./
+COPY workloads.mjs send.mjs plan.mjs direct.mjs ./
 CMD ["node", "send.mjs"]
