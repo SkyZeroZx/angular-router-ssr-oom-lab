@@ -5,6 +5,13 @@ services:
     environment:
       SSR_ALLOWED_HOSTS: ${SSR_ALLOWED_HOSTS:-}
       RESOLVER_HOLD_MS: ${RESOLVER_HOLD_MS:-1000}
+      PRODUCT_LINKS: ${PRODUCT_LINKS:-48}
+      BRAND_LINKS: ${BRAND_LINKS:-20}
+      COLOUR_LINKS: ${COLOUR_LINKS:-12}
+      SIZE_LINKS: ${SIZE_LINKS:-8}
+      PRICE_LINKS: ${PRICE_LINKS:-4}
+      SORT_LINKS: ${SORT_LINKS:-4}
+      PAGE_LINKS: ${PAGE_LINKS:-4}
     expose:
       - "4000"
     mem_limit: ${CONTAINER_MEM_LIMIT:-1536m}
@@ -42,6 +49,7 @@ services:
     command: ["node", "send.mjs"]
     environment:
       MODE: control
+      SHAPE: ${SHAPE:-matrix}
       HEAP_MB: ${HEAP_MB:-256}
       TARGET_URL: http://nginx:8080
     depends_on:
@@ -55,6 +63,7 @@ services:
     command: ["node", "send.mjs"]
     environment:
       MODE: candidate
+      SHAPE: ${SHAPE:-matrix}
       HEAP_MB: ${HEAP_MB:-256}
       TARGET_URL: http://nginx:8080
     depends_on:
@@ -68,6 +77,9 @@ services:
     command: ["node", "direct.mjs"]
     environment:
       MODE: ${MODE:-candidate}
+      SHAPE: ${SHAPE:-matrix}
+      PARAMS: ${PARAMS:-120000}
+      STEP: ${STEP:-11}
       SEGMENTS: ${SEGMENTS:-1488}
       CONCURRENCY: ${CONCURRENCY:-6}
       TARGET_URL: http://app:4000

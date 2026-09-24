@@ -3,9 +3,16 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# SHAPE selects which allocation path is exercised:
+#   matrix  numeric matrix-parameter names, one map per repeated URL segment
+#   filter  numeric names appended to a product filter, on a listing page whose
+#           links preserve the filter
+SHAPE="${SHAPE:-matrix}"
+
 usage() {
   echo "Usage: $0 [256|512]" >&2
   echo "       $0 [all|control|candidate] [256|512]" >&2
+  echo "       SHAPE=filter $0 [all|control|candidate] [256|512]" >&2
   exit 2
 }
 
@@ -26,26 +33,41 @@ case "${1:-}" in
   *) usage ;;
 esac
 
-case "$HEAP_MB" in
-  256)
-    CONCURRENCY=6
+case "$SHAPE" in
+  matrix)
     SEGMENTS_PER_REQUEST=1488
     PATH_BYTES=16368
+    case "$HEAP_MB" in
+      256) CONCURRENCY=6 ;;
+      512) CONCURRENCY=12 ;;
+      *) usage ;;
+    esac
+    CONTROL_LABEL="named matrix parameters"
+    CANDIDATE_LABEL="numeric matrix parameters"
     ;;
-  512)
-    CONCURRENCY=12
-    SEGMENTS_PER_REQUEST=1488
-    PATH_BYTES=16368
+  filter)
+    SEGMENTS_PER_REQUEST=""
+    PATH_BYTES=16365
+    case "$HEAP_MB" in
+      256) CONCURRENCY=6 ;;
+      512) CONCURRENCY=16 ;;
+      *) usage ;;
+    esac
+    CONTROL_LABEL="named filter parameters"
+    CANDIDATE_LABEL="numeric filter parameters"
     ;;
-  *) usage ;;
+  *)
+    echo "Unsupported SHAPE=$SHAPE. Expected matrix or filter." >&2
+    exit 2
+    ;;
 esac
 
-export HEAP_MB
+export HEAP_MB SHAPE
 
 if [[ "$MODE" == "all" ]]; then
-  EVIDENCE_DIR="evidence/run-$HEAP_MB"
+  EVIDENCE_DIR="evidence/run-$SHAPE-$HEAP_MB"
 else
-  EVIDENCE_DIR="evidence/run-$MODE-$HEAP_MB"
+  EVIDENCE_DIR="evidence/run-$SHAPE-$MODE-$HEAP_MB"
 fi
 
 OOM_PATTERN='JavaScript heap out of memory|Reached heap limit|FatalProcessOutOfMemory'
@@ -62,6 +84,8 @@ app_is_running() {
 
 start_fresh_stack() {
   docker compose down -v --remove-orphans >/dev/null 2>&1 || true
+  # Let the daemon release the old containers before recreating them.
+  sleep 2
   docker compose up -d app nginx
 
   for _ in $(seq 1 60); do
@@ -78,7 +102,7 @@ start_fresh_stack() {
 
 run_control() {
   echo
-  echo "== Control: named matrix parameters =="
+  echo "== Control: $CONTROL_LABEL =="
   start_fresh_stack
 
   if ! docker compose --profile test run --rm control \
@@ -109,7 +133,7 @@ run_candidate() {
   local container_id
 
   echo
-  echo "== Candidate: numeric matrix parameters =="
+  echo "== Candidate: $CANDIDATE_LABEL =="
   start_fresh_stack
 
   set +e
@@ -147,9 +171,16 @@ run_candidate() {
 rm -rf -- "$EVIDENCE_DIR"
 mkdir -p "$EVIDENCE_DIR"
 
-printf 'Heap: %s MiB | Requests: %s | Segments/request: %s | Path: %s bytes\n' \
-  "$HEAP_MB" "$CONCURRENCY" "$SEGMENTS_PER_REQUEST" "$PATH_BYTES" |
-  tee "$EVIDENCE_DIR/plan.txt"
+if [[ -n "$SEGMENTS_PER_REQUEST" ]]; then
+  printf 'Shape: %s | Heap: %s MiB | Requests: %s | Segments/request: %s | Path: %s bytes\n' \
+    "$SHAPE" "$HEAP_MB" "$CONCURRENCY" "$SEGMENTS_PER_REQUEST" "$PATH_BYTES" |
+    tee "$EVIDENCE_DIR/plan.txt"
+else
+  LINKS=$(( ${PRODUCT_LINKS:-48} + ${BRAND_LINKS:-20} + ${COLOUR_LINKS:-12} + ${SIZE_LINKS:-8} + ${PRICE_LINKS:-4} + ${SORT_LINKS:-4} + ${PAGE_LINKS:-4} ))
+  printf 'Shape: %s | Heap: %s MiB | Requests: %s | Links/render: %s | Path: %s bytes\n' \
+    "$SHAPE" "$HEAP_MB" "$CONCURRENCY" "$LINKS" "$PATH_BYTES" |
+    tee "$EVIDENCE_DIR/plan.txt"
+fi
 
 docker compose build app nginx control candidate
 
